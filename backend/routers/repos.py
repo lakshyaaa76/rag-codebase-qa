@@ -6,20 +6,15 @@ Endpoints:
   GET  /repos/{repo_id}  — poll the indexing status of a repository
 
 Phase 2: both endpoints fully implemented.
-  - POST /repos: validates URL, checks for existing record, inserts into DB,
-    resolves the default branch via GitHub API, then enqueues a background
-    indexing task.
-  - GET /repos/{repo_id}: reads the repo row from Supabase and returns status.
-
-The background task itself (index_repository) is stubbed here and will be
-wired to the real pipeline in Phase 5.
+Phase 5: background task wired to the real indexing pipeline.
+  _run_indexing() now calls services/indexer.py which orchestrates
+  ingestion → chunking → embedding → vector storage.
 """
 
 import logging
-import traceback
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 
 from models.schemas import IndexingStatus, RepoCreate, RepoResponse
 from services import repo_store
@@ -32,25 +27,23 @@ router = APIRouter(prefix="/repos", tags=["repos"])
 
 
 # ---------------------------------------------------------------------------
-# Background task placeholder
-# (Phase 5 will replace this with the real indexing pipeline)
+# Background task — real pipeline (Phase 5)
 # ---------------------------------------------------------------------------
 
-async def _run_indexing(repo_id: UUID) -> None:
+async def _run_indexing(repo_id: UUID, request: Request) -> None:
     """
-    Background task: orchestrate the full indexing pipeline for a repo.
+    Background task: run the full indexing pipeline for a repository.
 
-    Phase 2: stub that immediately marks the repo as failed with a clear
-    'not yet implemented' message. This lets the status-polling flow be
-    verified end-to-end without Phase 3–5 being complete.
+    Retrieves the embedding model from app.state (loaded at startup in main.py)
+    and passes it into index_repository() alongside the repo_id.
 
-    Phase 5 will replace this body with a call to services/indexer.py.
+    Any exception is handled inside index_repository() which guarantees
+    the repo status is set to 'failed' rather than left stuck in 'indexing'.
     """
-    logger.info("Indexing task started for repo %s (stub — Phase 5 will implement)", repo_id)
-    repo_store.set_status_failed(
-        repo_id,
-        "Indexing pipeline not yet implemented — coming in Phase 5.",
-    )
+    from services.indexer import index_repository  # local import avoids circular refs
+
+    model = request.app.state.embedding_model
+    await index_repository(repo_id=repo_id, model=model)
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +59,7 @@ async def _run_indexing(repo_id: UUID) -> None:
 async def submit_repo(
     payload: RepoCreate,
     background_tasks: BackgroundTasks,
+    request: Request,
 ) -> RepoResponse:
     """
     Accept a GitHub repository URL and queue it for indexing.
@@ -103,7 +97,6 @@ async def submit_repo(
 
     # --- Create or reset the DB record ---
     if existing and existing["status"] == "failed":
-        # Re-use the existing row: reset status to pending and clear error
         from database import supabase
         supabase.table("repos").update({
             "status": "pending",
@@ -122,7 +115,8 @@ async def submit_repo(
     repo_id = UUID(repo_row["id"])
 
     # --- Enqueue background indexing task ---
-    background_tasks.add_task(_run_indexing, repo_id)
+    # request is passed so _run_indexing can access app.state.embedding_model
+    background_tasks.add_task(_run_indexing, repo_id, request)
     logger.info("Enqueued indexing task for repo %s (%s)", repo_id, normalized_url)
 
     return RepoResponse(**repo_row)
