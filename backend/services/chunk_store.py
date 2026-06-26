@@ -92,6 +92,48 @@ def insert_chunks(
     return total_inserted
 
 
+def search_chunks(
+    repo_id: UUID,
+    query_embedding: list[float],
+    top_k: int,
+) -> list[dict]:
+    """
+    Run a pgvector cosine similarity search for a repo via the match_chunks RPC.
+
+    Calls the `match_chunks` Postgres function defined in
+    database/002_match_chunks_function.sql.
+
+    Args:
+        repo_id:         UUID of the repo to search within.
+        query_embedding: 384-dim float vector of the embedded question.
+        top_k:           Number of top results to return.
+
+    Returns:
+        List of row dicts with keys:
+          id, repo_id, file_path, language, start_line, end_line,
+          content, chunk_type, similarity (float 0.0–1.0)
+        Ordered by similarity descending (most relevant first).
+
+    Raises:
+        Exception: re-raises any Supabase/PostgREST error.
+    """
+    result = supabase.rpc(
+        "match_chunks",
+        {
+            "query_embedding": query_embedding,
+            "match_repo_id":   str(repo_id),
+            "match_count":     top_k,
+        },
+    ).execute()
+
+    rows = result.data or []
+    logger.debug(
+        "search_chunks returned %d rows for repo %s (top_k=%d)",
+        len(rows), repo_id, top_k,
+    )
+    return rows
+
+
 def delete_chunks_for_repo(repo_id: UUID) -> None:
     """
     Delete all chunks belonging to a repo.

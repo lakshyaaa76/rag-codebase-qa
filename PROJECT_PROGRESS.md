@@ -1,6 +1,6 @@
 ﻿# Project Status
 
-## Current Phase: Phase 6 — Retrieval Layer
+## Current Phase: Phase 7 — Grok Answer Generation
 
 ---
 
@@ -218,8 +218,46 @@
 ---
 
 ### Phase 6 — Retrieval Layer
-**Status: NOT STARTED**
+**Status: COMPLETED**
 **Purpose:** Retrieve relevant code for questions.
+
+**Deliverables completed:**
+- `database/002_match_chunks_function.sql` — new migration:
+  - `match_chunks(query_embedding, match_repo_id, match_count)` Postgres function
+  - Returns `id, repo_id, file_path, language, start_line, end_line, content, chunk_type, similarity`
+  - `similarity` computed as `1 - (embedding <=> query_embedding)` (cosine, 0.0–1.0)
+  - Scoped to a single `repo_id`; ordered by `embedding <=> query_embedding` ascending (most similar first)
+- `services/chunk_store.py` — `search_chunks()` added:
+  - Calls `supabase.rpc("match_chunks", {...}).execute()`
+  - Passes `query_embedding`, `match_repo_id`, `match_count`; returns `result.data` list of dicts
+- `services/retriever.py` — fully implemented:
+  - `retrieve_chunks(model, repo_id, question, top_k)` — embeds question, calls `search_chunks`, maps rows to `ChunkCitation` models
+  - Malformed rows are logged at WARNING and skipped; never raise for a single bad row
+  - Returns `list[ChunkCitation]` sorted by score descending (as returned by pgvector)
+- `routers/query.py` — fully implemented:
+  - `POST /query` validates repo exists (404) and is `ready` (409)
+  - Retrieves `app.state.embedding_model` from `Request`
+  - Calls `retrieve_chunks()`, returns `QueryResponse` with citations
+  - `answer` field is a placeholder string — replaced in Phase 7
+
+**Implementation decisions made:**
+- **RPC function over direct `.select().order()`** — the Supabase PostgREST client's `.order()` only accepts plain column names; it cannot express `ORDER BY embedding <=> $1`. A Postgres function is the standard Supabase pattern for pgvector search and keeps vector math server-side near the index.
+- **New DB migration file `002_match_chunks_function.sql`** — same apply-via-Dashboard pattern as migration 001. Kept separate from the schema migration so it can be re-run independently if the function needs updating.
+- **`similarity` = `1 - cosine_distance`** — pgvector's `<=>` is cosine *distance* (0 = identical, 2 = opposite). Subtracting from 1 gives an intuitive similarity score (1.0 = identical) that the frontend displays as "% match".
+- **`LANGUAGE sql STABLE`** — `STABLE` tells Postgres the function produces the same output for the same inputs within a single query, enabling query planner optimisations. Correct here since we're doing a read-only ordered scan.
+- **Placeholder answer in Phase 6** — the `POST /query` endpoint returns a clearly-labelled placeholder string rather than `501`. This means the full request/response contract is testable end-to-end (citations included) without Phase 7 being complete.
+
+**Deviations from Phase 0 design:**
+- None. Phase 0 specified cosine similarity via pgvector, scoped to `repo_id`, top_k=5 default, returning `ChunkCitation` objects. All implemented exactly as designed.
+
+**Manual actions required before Phase 7:**
+- Run migration `002_match_chunks_function.sql` in Supabase Dashboard → SQL Editor:
+  ```
+  Supabase Dashboard → SQL Editor → paste database/002_match_chunks_function.sql → Run
+  ```
+  This must be applied before any query requests will return results (the RPC call will 404 without it).
+
+---
 
 ---
 
