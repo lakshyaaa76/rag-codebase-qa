@@ -5,18 +5,15 @@ Endpoints:
   POST /query — ask a natural-language question about an indexed repository
 
 Phase 6: retrieval fully implemented.
-  - Validates repo exists and is in 'ready' status.
-  - Embeds the question and retrieves top-K chunks via pgvector.
-  - Returns citations with a placeholder answer string.
-
-Phase 7 will replace the placeholder answer with a real Grok-generated response.
+Phase 7: Grok answer generation wired in. Full pipeline now active:
+  validate repo → retrieve chunks → generate answer via Grok → return response.
 """
 
 import logging
-from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, status
 
+from llm.grok import generate_answer
 from models.schemas import QueryRequest, QueryResponse
 from services import repo_store
 from services.retriever import retrieve_chunks
@@ -33,13 +30,13 @@ router = APIRouter(prefix="/query", tags=["query"])
 )
 async def query_repo(payload: QueryRequest, request: Request) -> QueryResponse:
     """
-    Retrieve relevant code chunks for a question and return them as citations.
+    Retrieve relevant code chunks and generate a grounded answer via Grok.
 
-    Phase 6 behaviour:
-      - 404 if repo_id is not found.
-      - 409 if the repo is not yet in 'ready' status.
-      - Embeds the question, runs similarity search, returns citations.
-      - answer field is a placeholder — real answer generation added in Phase 7.
+    Steps:
+      1. Validate repo exists (404) and is 'ready' (409).
+      2. Embed question, retrieve top-K chunks via pgvector.
+      3. Send question + chunks to Grok API.
+      4. Return answer + citations.
 
     Request body:
       - repo_id:   UUID of a 'ready' indexed repository
@@ -79,11 +76,20 @@ async def query_repo(payload: QueryRequest, request: Request) -> QueryResponse:
             payload.repo_id, payload.question[:60],
         )
 
-    # --- Return response (answer is placeholder until Phase 7) ---
-    # TODO (Phase 7): replace placeholder with Grok-generated answer
-    placeholder_answer = (
-        "Answer generation is not yet implemented. "
-        "See the citations below for relevant code snippets."
-    )
+    # --- Generate answer via Grok ---
+    try:
+        answer = await generate_answer(
+            question=payload.question,
+            citations=citations,
+        )
+    except Exception as exc:
+        logger.error(
+            "Grok API call failed for repo %s: %s",
+            payload.repo_id, exc,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Answer generation failed: {exc}",
+        )
 
-    return QueryResponse(answer=placeholder_answer, citations=citations)
+    return QueryResponse(answer=answer, citations=citations)

@@ -1,6 +1,6 @@
 ﻿# Project Status
 
-## Current Phase: Phase 7 — Grok Answer Generation
+## Current Phase: Phase 8 — Frontend & UX
 
 ---
 
@@ -262,8 +262,35 @@
 ---
 
 ### Phase 7 — Grok Answer Generation
-**Status: NOT STARTED**
+**Status: COMPLETED**
 **Purpose:** Generate grounded answers using retrieved code.
+
+**Deliverables completed:**
+- `llm/grok.py` — fully implemented:
+  - `build_user_message(question, citations)` — constructs numbered citation blocks `[1]`, `[2]`, ... with file path, line range, language fence, and content; truncates any single chunk exceeding 3,000 chars; returns formatted string
+  - `generate_answer(question, citations)` — async function; POSTs to `https://api.x.ai/v1/chat/completions`; reads `settings.grok_model`, `settings.grok_max_tokens`, `settings.grok_temperature`; extracts `choices[0].message.content`; strips whitespace; propagates HTTP and shape errors
+  - `_SYSTEM_PROMPT` — 440-char grounding instruction: answer only from provided snippets, cite by number, state clearly if answer not present
+- `routers/query.py` — updated:
+  - Placeholder string replaced with `await generate_answer(question, citations)`
+  - Grok exceptions caught and re-raised as `HTTP 502 Bad Gateway` with the error message in `detail`
+  - TODO comment removed
+
+**Implementation decisions made:**
+- **`httpx.AsyncClient` over the OpenAI Python SDK** — Grok's OpenAI-compatible endpoint is a simple REST call; adding the OpenAI SDK as a dependency just to wrap one HTTP call is unnecessary weight. `httpx` is already in `requirements.txt` from Phase 2.
+- **`502 Bad Gateway` for Grok failures** — a Grok API error (rate limit, outage, bad key) is a downstream service failure, not a client error. `502` is the correct HTTP semantic; the `detail` field carries the exception message so the frontend can show a useful error.
+- **`_CHUNK_CONTENT_MAX_CHARS = 3_000`** — conservative cap per chunk. A 60-line chunk at ~50 chars/line is ~3,000 chars naturally; the cap guards against a pathological chunk (e.g. a minified file that slipped through filtering) filling the entire context window.
+- **System prompt does not use `LANGUAGE sql STABLE`-style directives** — kept plain English, concise (440 chars). Overly long system prompts at low temperature can cause the model to echo instructions back in the answer.
+- **Answer `.strip()`** — Grok sometimes returns leading/trailing whitespace or a trailing newline; stripping before returning keeps the frontend rendering clean.
+- **`grok_model` confirmed as `"grok-3"`** — resolves the Phase 0 open question. Value is read from `settings.grok_model` so it can be overridden via `.env` without a code change.
+
+**Deviations from Phase 0 design:**
+- None. Phase 0 specified: Grok API, temperature 0.2, max_tokens 1024, system grounding prompt, numbered citation blocks. All implemented exactly as designed.
+
+**Manual actions required before Phase 8:**
+- None. No new dependencies added (`httpx` was already present).
+- Ensure `GROK_API_KEY` is set in the root `.env` file before running the backend end-to-end.
+
+---
 
 ---
 
