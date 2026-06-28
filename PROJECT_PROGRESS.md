@@ -306,16 +306,3 @@
 
 ---
 
-## Progress Update Rules
-
-Whenever a phase is completed:
-
-1. Mark the phase as COMPLETED.
-2. Update Current Phase.
-3. Record key decisions made.
-4. Record architectural changes.
-5. Record assumptions introduced.
-6. Record unresolved questions.
-7. Keep this file current throughout the project.
-
-This file is the project's source of truth.
