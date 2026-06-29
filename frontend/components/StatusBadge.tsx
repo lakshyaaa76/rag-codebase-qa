@@ -1,17 +1,22 @@
 ﻿import type { RepoStatus } from "@/types";
-interface StatusBadgeProps { status: RepoStatus; }
-const STYLES: Record<RepoStatus, string> = {
-  pending: "bg-gray-100 text-gray-600", indexing: "bg-yellow-100 text-yellow-700",
-  ready: "bg-green-100 text-green-700", failed: "bg-red-100 text-red-700",
+
+interface StatusBadgeProps {
+  status: RepoStatus;
+}
+
+const CONFIG: Record<RepoStatus, { color: string; glow: string; label: string; dot: string }> = {
+  pending:  { color: "text-terminal-amber", glow: "",                         label: "PENDING",   dot: "bg-terminal-amber" },
+  indexing: { color: "text-terminal-amber", glow: "",                         label: "INDEXING",  dot: "bg-terminal-amber animate-pulse-slow" },
+  ready:    { color: "text-terminal-green", glow: "text-glow-green",          label: "READY",     dot: "bg-terminal-green" },
+  failed:   { color: "text-terminal-red",   glow: "",                         label: "FAILED",    dot: "bg-terminal-red" },
 };
-const LABELS: Record<RepoStatus, string> = {
-  pending: "Pending", indexing: "Indexing...", ready: "Ready", failed: "Failed",
-};
+
 export default function StatusBadge({ status }: StatusBadgeProps) {
+  const { color, glow, label, dot } = CONFIG[status];
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STYLES[status]}`}>
-      {status === "indexing" && <span className="mr-1.5 h-2 w-2 animate-pulse rounded-full bg-yellow-500" />}
-      {LABELS[status]}
+    <span className={`inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-widest ${color} ${glow}`}>
+      <span className={`h-1.5 w-1.5 ${dot}`} />
+      {label}
     </span>
   );
 }

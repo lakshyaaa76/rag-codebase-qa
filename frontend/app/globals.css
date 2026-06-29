@@ -1,3 +1,86 @@
 ﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import JetBrains Mono from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    height: 100%;
+    background-color: #050A0E;
+    color: #E2EBF0;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* Scrollbar styling — thin, terminal-feel */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #050A0E;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1A2F4A;
+    border-radius: 0;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #00D9FF;
+  }
+
+  /* Selection color */
+  ::selection {
+    background: #00D9FF33;
+    color: #E2EBF0;
+  }
+}
+
+@layer components {
+  /* Terminal panel — sharp rectangular bordered box */
+  .terminal-panel {
+    @apply bg-terminal-panel border border-terminal-border;
+  }
+
+  /* Neon cyan text glow */
+  .text-glow-cyan {
+    text-shadow: 0 0 8px #00D9FF88;
+  }
+
+  /* Neon green text glow */
+  .text-glow-green {
+    text-shadow: 0 0 8px #39FF1488;
+  }
+
+  /* Input — terminal style */
+  .terminal-input {
+    @apply bg-terminal-bg border border-terminal-border text-terminal-text font-mono
+           placeholder-terminal-muted focus:outline-none focus:border-terminal-cyan
+           transition-colors duration-150;
+  }
+
+  /* Button — terminal style */
+  .terminal-btn {
+    @apply bg-transparent border border-terminal-cyan text-terminal-cyan font-mono
+           uppercase tracking-widest text-xs px-4 py-2
+           hover:bg-terminal-cyan hover:text-terminal-bg
+           transition-all duration-150 disabled:opacity-30
+           disabled:cursor-not-allowed;
+  }
+
+  /* Condensed uppercase section label */
+  .terminal-label {
+    @apply text-terminal-muted font-mono text-xs uppercase tracking-widest;
+  }
+
+  /* Horizontal rule */
+  .terminal-divider {
+    @apply border-t border-terminal-border;
+  }
+}
