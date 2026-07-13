@@ -92,4 +92,7 @@ async def query_repo(payload: QueryRequest, request: Request) -> QueryResponse:
             detail=f"Answer generation failed: {exc}",
         )
 
+    if "Please ask questions related to the project." in answer:
+        citations = []
+
     return QueryResponse(answer=answer, citations=citations)

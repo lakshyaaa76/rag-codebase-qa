@@ -7,15 +7,21 @@ A full-stack application that allows users to ask natural-language questions abo
 - 🔍 **Index GitHub Repositories** — Clone and analyze any public GitHub repository
 - 🤖 **Natural Language Queries** — Ask questions about the codebase in plain English
 - 💾 **Vector Embeddings** — Store code embeddings in Supabase for fast retrieval
-- 🧠 **AI-Powered Answers** — Use Grok AI to generate contextual answers with citations
+- 🧠 **AI-Powered Answers** — Use OpenAI to generate contextual answers with citations
 - 🔗 **Citation Support** — Get references to the exact files and lines in the source code
 - ⚡ **Real-time Status** — Monitor indexing progress with live status updates
+
+## Recent Updates
+
+- **Exact Nearest Neighbor (ENN) Search**: Removed the `ivfflat`/`hnsw` vector indexes in favor of ENN search scoped by the `repo_id` index, guaranteeing 100% accurate vector search results without post-filtering issues.
+- **Strict Out-of-Domain Filtering**: Updated the LLM system prompt to explicitly reject conversational or out-of-domain questions. The backend intercepts these rejections and automatically clears irrelevant UI citations.
+- **UI Enhancements**: Removed the placeholder text from the frontend footer and enlarged the main terminal header for better readability.
 
 ## Tech Stack
 
 ### Backend
 - **Framework**: FastAPI (Python)
-- **LLM**: Grok API (xAI)
+- **LLM**: OpenAI API
 - **Vector DB**: Supabase (PostgreSQL + pgvector)
 - **Server**: Uvicorn
 - **Dependencies**: Pydantic, httpx, python-dotenv
@@ -29,7 +35,7 @@ A full-stack application that allows users to ask natural-language questions abo
 ### External Services
 - **GitHub**: Repository cloning and code retrieval
 - **Supabase**: Vector storage and semantic search
-- **Grok AI**: LLM for answer generation
+- **OpenAI**: LLM for answer generation
 
 ## Prerequisites
 
@@ -40,7 +46,7 @@ A full-stack application that allows users to ask natural-language questions abo
 - API Keys:
   - Supabase (URL + Key)
   - GitHub Token (for private repos and rate limits)
-  - Grok API Key (xAI)
+  - OpenAI API Key
 
 ## Installation
 
@@ -62,11 +68,11 @@ SUPABASE_KEY=your_supabase_key
 # --- GitHub ---
 GITHUB_TOKEN=your_github_token
 
-# --- Grok ---
-GROK_API_KEY=your_grok_api_key
-GROK_MODEL=grok-3
-GROK_MAX_TOKENS=1024
-GROK_TEMPERATURE=0.2
+# --- OpenAI ---
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_MAX_TOKENS=1024
+OPENAI_TEMPERATURE=0.2
 
 # --- Retrieval ---
 RETRIEVAL_TOP_K=5
@@ -130,7 +136,7 @@ rag-codebase-qa/
 │   ├── database.py         # Database connection
 │   ├── requirements.txt    # Python dependencies
 │   ├── llm/
-│   │   └── grok.py        # Grok API integration
+│   │   └── gpt_4o_mini.py # OpenAI API integration
 │   ├── models/
 │   │   └── schemas.py     # Pydantic models
 │   ├── routers/

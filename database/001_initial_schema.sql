@@ -1,4 +1,4 @@
-﻿-- Run this in Supabase Dashboard -> SQL Editor
+-- Run this in Supabase Dashboard -> SQL Editor
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -45,8 +45,7 @@ CREATE TABLE IF NOT EXISTS chunks (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS chunks_embedding_idx
-    ON chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
 
 CREATE INDEX IF NOT EXISTS chunks_repo_id_idx ON chunks (repo_id);
 CREATE INDEX IF NOT EXISTS chunks_content_hash_idx ON chunks (content_hash);

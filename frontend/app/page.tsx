@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { submitRepo, getRepoStatus, queryRepo } from "@/lib/api";
@@ -128,12 +128,9 @@ export default function HomePage() {
                         bg-terminal-panel overflow-y-auto">
 
         {/* Header */}
-        <div className="border-b border-terminal-border px-4 py-3">
-          <p className="text-terminal-cyan text-xs uppercase tracking-widest text-glow-cyan">
+        <div className="border-b border-terminal-border px-4 py-4">
+          <p className="text-terminal-cyan text-sm font-semibold uppercase tracking-widest text-glow-cyan">
             RAG // CODEBASE Q&amp;A
-          </p>
-          <p className="text-terminal-muted text-xs mt-0.5">
-            v0.1.0 // TERMINAL
           </p>
         </div>
 
@@ -212,14 +209,9 @@ export default function HomePage() {
 
         {/* Spacer */}
         <div className="flex-1" />
-
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-terminal-border">
-          <p className="text-terminal-muted text-xs font-mono">
-            // powered by grok + pgvector
-          </p>
-        </div>
       </aside>
+
+
 
       {/* ================================================================
           MAIN AREA — chat history + question input
