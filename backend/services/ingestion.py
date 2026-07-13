@@ -157,7 +157,7 @@ async def fetch_file_content(
         httpx.HTTPStatusError: on non-404 HTTP errors.
     """
     url = f"{GITHUB_RAW_BASE}/{owner}/{repo_name}/{branch}/{file_path}"
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(headers=_make_headers(), timeout=30.0) as client:
         response = await client.get(url)
         if response.status_code == 404:
             logger.debug("File not found (may have been deleted): %s", file_path)

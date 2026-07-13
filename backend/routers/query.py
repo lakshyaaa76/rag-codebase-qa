@@ -1,19 +1,19 @@
-﻿"""
+"""
 Router: /query
 
 Endpoints:
   POST /query — ask a natural-language question about an indexed repository
 
 Phase 6: retrieval fully implemented.
-Phase 7: Grok answer generation wired in. Full pipeline now active:
-  validate repo → retrieve chunks → generate answer via Grok → return response.
+Phase 7: OpenAI answer generation wired in. Full pipeline now active:
+  validate repo → retrieve chunks → generate answer via OpenAI → return response.
 """
 
 import logging
 
 from fastapi import APIRouter, HTTPException, Request, status
 
-from llm.grok import generate_answer
+from llm.gpt_4o_mini import generate_answer
 from models.schemas import QueryRequest, QueryResponse
 from services import repo_store
 from services.retriever import retrieve_chunks
@@ -30,12 +30,12 @@ router = APIRouter(prefix="/query", tags=["query"])
 )
 async def query_repo(payload: QueryRequest, request: Request) -> QueryResponse:
     """
-    Retrieve relevant code chunks and generate a grounded answer via Grok.
+    Retrieve relevant code chunks and generate a grounded answer via OpenAI.
 
     Steps:
       1. Validate repo exists (404) and is 'ready' (409).
       2. Embed question, retrieve top-K chunks via pgvector.
-      3. Send question + chunks to Grok API.
+      3. Send question + chunks to OpenAI API.
       4. Return answer + citations.
 
     Request body:
@@ -76,7 +76,7 @@ async def query_repo(payload: QueryRequest, request: Request) -> QueryResponse:
             payload.repo_id, payload.question[:60],
         )
 
-    # --- Generate answer via Grok ---
+    # --- Generate answer via OpenAI ---
     try:
         answer = await generate_answer(
             question=payload.question,
@@ -84,7 +84,7 @@ async def query_repo(payload: QueryRequest, request: Request) -> QueryResponse:
         )
     except Exception as exc:
         logger.error(
-            "Grok API call failed for repo %s: %s",
+            "OpenAI API call failed for repo %s: %s",
             payload.repo_id, exc,
         )
         raise HTTPException(
