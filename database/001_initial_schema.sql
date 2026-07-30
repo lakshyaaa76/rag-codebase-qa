@@ -25,6 +25,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS repos_updated_at ON repos;
 CREATE TRIGGER repos_updated_at
     BEFORE UPDATE ON repos
     FOR EACH ROW
@@ -41,7 +42,7 @@ CREATE TABLE IF NOT EXISTS chunks (
     content_hash    TEXT NOT NULL,
     chunk_index     INTEGER NOT NULL,
     chunk_type      TEXT,
-    embedding       VECTOR(384) NOT NULL,
+    embedding       VECTOR(768) NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

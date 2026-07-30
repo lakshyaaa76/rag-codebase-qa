@@ -11,10 +11,10 @@
 
 **Key Decisions Made:**
 - Full-stack: Next.js frontend, FastAPI backend, Supabase PostgreSQL + pgvector
-- Two database tables: `repos` (status tracking) and `chunks` (content + 384-dim vectors)
+- Two database tables: `repos` (status tracking) and `chunks` (content + 768-dim vectors)
 - GitHub Contents API for repo ingestion (not `git clone`)
 - Hybrid chunking: AST-aware (tree-sitter) for Python/JS/TS, sliding window fallback for others
-- `sentence-transformers` / `all-MiniLM-L6-v2` for embeddings (loaded once at startup)
+- `sentence-transformers` / `jinaai/jina-embeddings-v2-base-code` for embeddings (loaded once at startup)
 - FastAPI `BackgroundTasks` for indexing (not Celery/Redis)
 - Polling (`GET /repos/{id}` every 2s) for indexing status (not WebSockets)
 - IVFFlat index on pgvector; cosine similarity; top_k = 5 default
@@ -24,7 +24,7 @@
 **Architectural Assumptions Introduced:**
 - Repo uniqueness keyed on exact `github_url` string
 - 500-file cap per repo (portfolio safeguard)
-- Chunk embedding dimension: 384 (all-MiniLM-L6-v2)
+- Chunk embedding dimension: 384 (jinaai/jina-embeddings-v2-base-code)
 - Status lifecycle: `pending → indexing → ready | failed`
 
 **Unresolved Questions (deferred to later phases):**
@@ -151,8 +151,8 @@
 
 **Deliverables completed:**
 - `services/embedder.py` — fully implemented:
-  - `load_model()` — loads `all-MiniLM-L6-v2` via sentence-transformers; called once at startup
-  - `embed_chunks(model, chunks)` — encodes `list[ChunkResult]` → `list[list[float]]` (384 dims, parallel to input)
+  - `load_model()` — loads `jinaai/jina-embeddings-v2-base-code` via sentence-transformers; called once at startup
+  - `embed_chunks(model, chunks)` — encodes `list[ChunkResult]` → `list[list[float]]` (768 dims, parallel to input)
   - `embed_query(model, question)` — encodes a single question string → `list[float]`
   - `_encode()` — shared internal helper; `normalize_embeddings=True` so cosine similarity equals dot product, consistent with pgvector's `<=>` operator
   - `TYPE_CHECKING` guard on `SentenceTransformer` import so module loads cleanly even without the package installed
@@ -162,14 +162,14 @@
 - `main.py` — lifespan updated: model loaded at startup via `load_model()`, stored on `app.state.embedding_model`; TODO comment removed
 
 **Implementation decisions made:**
-- **`normalize_embeddings=True` in `_encode()`** — all-MiniLM-L6-v2 is trained with normalised output; explicitly normalising ensures the pgvector `<=>` (cosine) operator gives correct results even if a future model swap doesn't normalise by default.
+- **`normalize_embeddings=True` in `_encode()`** — jinaai/jina-embeddings-v2-base-code is trained with normalised output; explicitly normalising ensures the pgvector `<=>` (cosine) operator gives correct results even if a future model swap doesn't normalise by default.
 - **Batch size 64** — conservative safe default for CPU. No config setting added for it at this phase; easy to expose via `settings` in Phase 9 if profiling shows it matters.
-- **Batch insert size 200** — Supabase's REST API serialises rows as JSON. At 384 floats × 4 bytes each, 200 rows ≈ 300 KB payload, well within limits. 500 rows could work but 200 gives a comfortable margin.
+- **Batch insert size 200** — Supabase's REST API serialises rows as JSON. At 768 floats × 4 bytes each, 200 rows ≈ 300 KB payload, well within limits. 500 rows could work but 200 gives a comfortable margin.
 - **`chunk_store.py` as a new module** — same rationale as `repo_store.py` in Phase 2: all table operations in one place, router/indexer stay thin.
 - **Model stored on `app.state`, not a module-level global** — avoids import-time side effects and makes the model injectable for testing. Phase 5 and 6 will access it as `request.app.state.embedding_model` (retriever) and directly as a parameter passed from the indexer background task.
 
 **Deviations from Phase 0 design:**
-- None. Phase 0 specified: model loaded once at startup on `app.state`, sentence-transformers, all-MiniLM-L6-v2, 384 dims, batch encoding. All implemented exactly as designed.
+- None. Phase 0 specified: model loaded once at startup on `app.state`, sentence-transformers, jinaai/jina-embeddings-v2-base-code, 768 dims, batch encoding. All implemented exactly as designed.
 
 **Manual actions required before Phase 5:**
 - None additional. `sentence-transformers==3.3.1` was already in `requirements.txt` from Phase 1. Run `pip install -r requirements.txt` if not done since Phase 1.

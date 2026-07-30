@@ -198,7 +198,7 @@ CREATE TABLE chunks (
     chunk_type    TEXT,                -- 'function' | 'class' | 'block' | 'file_header'
 
     -- Vector
-    embedding     VECTOR(384) NOT NULL, -- all-MiniLM-L6-v2 produces 384 dims
+    embedding     VECTOR(768) NOT NULL, -- jinaai/jina-embeddings-v2-base-code produces 768 dims
 
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -428,8 +428,8 @@ chunks: list[Chunk]
 Extract content strings
        │
        ▼
-Batch encode via SentenceTransformer('all-MiniLM-L6-v2')
-  model.encode(texts, batch_size=64, show_progress_bar=False)
+Batch encode via SentenceTransformer('jinaai/jina-embeddings-v2-base-code')
+  model.encode(texts, batch_size=8, show_progress_bar=False)
        │
        ▼
 Returns: numpy array of shape (N, 384)
@@ -443,9 +443,9 @@ Bulk insert into chunks table
 
 **Model loaded once at startup** (FastAPI lifespan event), not per request.
 
-**Why `all-MiniLM-L6-v2`:**
+**Why `jinaai/jina-embeddings-v2-base-code`:**
 - Already in the project spec
-- 384 dimensions — small, fast, good enough for code similarity
+- 768 dimensions — small, fast, good enough for code similarity
 - Runs on CPU without GPU requirement
 - 14k+ stars on HuggingFace; well-tested
 
@@ -560,7 +560,7 @@ Return QueryResponse { answer, citations }
 
 ### Decision 4: Single embedding model loaded at startup
 
-**Chosen:** Load `all-MiniLM-L6-v2` once in FastAPI lifespan  
+**Chosen:** Load `jinaai/jina-embeddings-v2-base-code` once in FastAPI lifespan  
 **Alternative:** Load on-demand per request  
 **Tradeoff:** Loading the model takes ~2 seconds and ~90MB RAM. Loading per request would make every indexing and query request pay that cost. Loading at startup is the correct pattern.  
 **Decision:** Lifespan-loaded singleton.

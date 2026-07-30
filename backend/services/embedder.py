@@ -1,4 +1,4 @@
-﻿"""
+"""
 Embedding service.
 
 Wraps sentence-transformers (all-MiniLM-L6-v2) to produce 384-dimensional
@@ -35,8 +35,8 @@ from services.chunker import ChunkResult
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "all-MiniLM-L6-v2"
-BATCH_SIZE = 64
+MODEL_NAME = "jinaai/jina-embeddings-v2-base-code"
+BATCH_SIZE = 8
 
 
 # ---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ def load_model() -> "SentenceTransformer":
     from sentence_transformers import SentenceTransformer  # noqa: PLC0415
 
     logger.info("Loading embedding model: %s", MODEL_NAME)
-    model = SentenceTransformer(MODEL_NAME)
+    model = SentenceTransformer(MODEL_NAME, trust_remote_code=True)
     logger.info("Embedding model loaded successfully.")
     return model
 

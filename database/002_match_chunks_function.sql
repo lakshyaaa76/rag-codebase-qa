@@ -15,7 +15,7 @@
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION match_chunks(
-    query_embedding  VECTOR(384),
+    query_embedding  VECTOR(768),
     match_repo_id    UUID,
     match_count      INT DEFAULT 5
 )
